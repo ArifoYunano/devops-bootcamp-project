@@ -1,60 +1,29 @@
-resource "aws_vpc" "devops_vpc" {
-  cidr_block = "10.0.0.0/24"
-  tags = {
-    Name = "tf-vpc"
-  }
-}
+module "my_vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
 
-resource "aws_subnet" "my_subnet" {
-  vpc_id                  = aws_vpc.my_vpc.id
-  cidr_block              = "10.0.0.0/25"
-  availability_zone       = "ap-southeast-1a"
+  name = "devops-vpc"
+  cidr = "10.0.0.0/24"
+  azs  = ["ap-southeast-1a"]
+
+  public_subnets  = ["10.0.0.0/25"]
+  private_subnets = ["10.0.0.128/25"]
+
+  # Force exact subnet names instead of the auto-generated "devops-vpc-public-ap-southeast-1a" style
+  public_subnet_names  = ["devops-public-subnet"]
+  private_subnet_names = ["devops-private-subnet"]
+
   map_public_ip_on_launch = true
-  tags = {
-    Name = "tf-subnet-public"
-  }
-}
+  enable_nat_gateway      = true
+  single_nat_gateway      = true
 
-resource "aws_subnet" "my_private_subnet" {
-  vpc_id                  = aws_vpc.my_vpc.id
-  cidr_block              = "10.0.0.128/25"
-  availability_zone       = "ap-southeast-1a"
-  map_public_ip_on_launch = false
-  tags = {
-    Name = "tf-subnet-private"
-  }
-}
+  # Route table names
+  public_route_table_tags  = { Name = "devops-public-route" }
+  private_route_table_tags = { Name = "devops-private-route" }
 
-resource "aws_internet_gateway" "my_igw" {
-  vpc_id = aws_vpc.my_vpc.id
-  tags = {
-    Name = "tf-igw"
-  }
-}
-resource "aws_route_table" "my_route_table" {
-  vpc_id = aws_vpc.my_vpc.id
-  tags = {
-    Name = "tf-rt-public"
-  }
-}
-resource "aws_route" "my_route" {
-  route_table_id         = aws_route_table.my_route_table.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.my_igw.id
-}
-resource "aws_route_table_association" "my_link" {
-  subnet_id      = aws_subnet.my_subnet.id
-  route_table_id = aws_route_table.my_route_table.id
-}
+  # Internet Gateway name
+  igw_tags = { Name = "devops-igw" }
 
-resource "aws_route_table" "my_private_route_table" {
-  vpc_id = aws_vpc.my_vpc.id
-  tags = {
-    Name = "tf-rt-private"
-  }
-}
-
-resource "aws_route_table_association" "my_private_link" {
-  subnet_id      = aws_subnet.my_private_subnet.id
-  route_table_id = aws_route_table.my_private_route_table.id
+  # NAT Gateway name
+  nat_gateway_tags = { Name = "devops-ngw" }
 }
