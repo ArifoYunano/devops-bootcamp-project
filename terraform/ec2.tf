@@ -23,6 +23,14 @@ module "web_server" {
   key_name               = "arifyunan-keypair"
   iam_instance_profile   = "EC2-SSM-Role"
   root_block_device      = { size = 16 }
+  user_data_replace_on_change = true
+  user_data = <<-EOF
+    #cloud-config
+    users:
+      - name: ubuntu
+        ssh_authorized_keys:
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILjygqKWGMFi6miCExPC24aw78IsVLGWi3GCkYsQjQ2X ssm-user@ip-10-0-0-135
+  EOF
 
   tags = { Name = "devops-web-server" }
 }
@@ -68,6 +76,14 @@ module "monitoring_server" {
   key_name               = "arifyunan-keypair"
   iam_instance_profile   = "EC2-SSM-Role"
   root_block_device      = { size = 16 }
+  user_data_replace_on_change = true
+  user_data = <<-EOF
+    #cloud-config
+    users:
+      - name: ubuntu
+        ssh_authorized_keys:
+          - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILjygqKWGMFi6miCExPC24aw78IsVLGWi3GCkYsQjQ2X ssm-user@ip-10-0-0-135
+  EOF
 
   tags = { Name = "devops-monitoring-server" }
 }

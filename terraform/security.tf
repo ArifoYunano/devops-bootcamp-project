@@ -65,3 +65,12 @@ resource "aws_security_group" "devops_private_sg" {
     Name = "devops-private-sg"
   }
 }
+
+resource "aws_security_group_rule" "allow_ssh_from_controller" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = ["10.0.0.135/32"]  # controller's private IP only
+  security_group_id = aws_security_group.devops_public_sg.id  # repeat for devops_private_sg too
+}
