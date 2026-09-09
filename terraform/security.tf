@@ -102,5 +102,4 @@ module "devops_private_sg" {
   tags = {
     Name = "devops-private-sg"
   }
-
 }
