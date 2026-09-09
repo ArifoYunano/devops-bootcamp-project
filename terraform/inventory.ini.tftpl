@@ -1,0 +1,14 @@
+[webservers]
+web-server ansible_host=${web_server_ip}
+
+[ansible_controller]
+ansible-controller ansible_host=${ansible_controller_ip}
+
+[monitoring]
+monitoring-server ansible_host=${monitoring_server_ip}
+
+[all:vars]
+ansible_connection=ssh
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/home/ssm-user/.ssh/ansible_controller_ed25519
+ansible_ssh_common_args='-o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new'

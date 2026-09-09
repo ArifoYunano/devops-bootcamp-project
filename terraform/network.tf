@@ -9,7 +9,6 @@ module "my_vpc" {
   public_subnets  = ["10.0.0.0/25"]
   private_subnets = ["10.0.0.128/25"]
 
-  # Force exact subnet names instead of the auto-generated "devops-vpc-public-ap-southeast-1a" style
   public_subnet_names  = ["devops-public-subnet"]
   private_subnet_names = ["devops-private-subnet"]
 
