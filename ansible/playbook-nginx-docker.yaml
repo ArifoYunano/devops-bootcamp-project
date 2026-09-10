@@ -1,0 +1,82 @@
+---
+- name: Deploy Nginx with Docker Compose
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    app_dir: /opt/nginx-docker
+
+  tasks:
+    - name: Stop host Nginx if installed
+      ansible.builtin.systemd:
+        name: nginx
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - name: Install Docker Engine and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is started and enabled
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create application HTML directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}/html"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Copy Compose file
+      ansible.builtin.copy:
+        src: nginx-docker/compose.yaml
+        dest: "{{ app_dir }}/compose.yaml"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Copy Nginx site configuration
+      ansible.builtin.copy:
+        src: nginx-docker/default.conf
+        dest: "{{ app_dir }}/default.conf"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Copy Nginx HTML page
+      ansible.builtin.copy:
+        src: nginx-docker/html/index.html
+        dest: "{{ app_dir }}/html/index.html"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Validate Docker Compose is available
+      ansible.builtin.command:
+        cmd: docker compose version
+      changed_when: false
+
+    - name: Start Nginx container with Docker Compose
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ app_dir }}"
+      register: compose_up
+      changed_when: >
+        'Creating' in compose_up.stderr or
+        'Recreating' in compose_up.stderr or
+        'Started' in compose_up.stderr
+
+    - name: Verify Nginx responds locally
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        status_code: 200

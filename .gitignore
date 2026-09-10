@@ -55,4 +55,6 @@ override.tf.json
 # Editor and OS files
 .vscode/
 .idea/
-.DS_Store
+.DS_Store.env
+*.pem
+ansible_key

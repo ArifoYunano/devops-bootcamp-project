@@ -1,0 +1,8 @@
+---
+- name: Install Prometheus Node Exporter on web server
+  hosts: exporters
+  become: true
+  gather_facts: true
+
+  roles:
+    - prometheus.prometheus.node_exporter

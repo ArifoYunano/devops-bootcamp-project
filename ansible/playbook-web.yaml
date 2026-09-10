@@ -1,0 +1,88 @@
+---
+- name: Pull ECR image and run web container
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    aws_region: ap-southeast-1
+    ecr_registry: 296766961942.dkr.ecr.ap-southeast-1.amazonaws.com
+    image_repo: devops-bootcamp/final-project-arifyunan
+    image_tag: v1
+    image_full: "{{ ecr_registry }}/{{ image_repo }}:{{ image_tag }}"
+    web_port: 80
+
+  tasks:
+    - name: Ensure Docker service is started and enabled
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Install AWS CLI prerequisites
+      ansible.builtin.apt:
+        name:
+          - curl
+          - unzip
+        state: present
+        update_cache: true
+
+    - name: Install AWS CLI v2 if missing
+      ansible.builtin.shell: |
+        set -e
+        if ! command -v aws >/dev/null 2>&1; then
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          rm -rf /tmp/aws-cli
+          unzip -q -o /tmp/awscliv2.zip -d /tmp/aws-cli
+          /tmp/aws-cli/aws/install --update
+        fi
+      args:
+        creates: /usr/local/bin/aws
+
+    - name: Authenticate Docker to ECR
+      ansible.builtin.shell: |
+        set -o pipefail
+        aws ecr get-login-password --region {{ aws_region }} \
+          | docker login --username AWS --password-stdin {{ ecr_registry }}
+      args:
+        executable: /bin/bash
+      register: ecr_login
+      retries: 6
+      delay: 10
+      until: ecr_login.rc == 0
+      changed_when: false
+
+    - name: Remove old Docker Compose Nginx stack
+      ansible.builtin.command:
+        cmd: docker compose -f /opt/nginx-docker/compose.yaml down
+      failed_when: false
+      changed_when: false
+
+    - name: Remove old application container
+      community.docker.docker_container:
+        name: web
+        state: absent
+
+    - name: Pull application image from ECR
+      community.docker.docker_image:
+        name: "{{ image_full }}"
+        source: pull
+
+    - name: Run application web container on port 80
+      community.docker.docker_container:
+        name: web
+        image: "{{ image_full }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ web_port }}:80"
+
+    - name: Show web container status
+      ansible.builtin.command:
+        cmd: docker ps --filter name=web --format "table {{ '{{.Names}}' }}\t{{ '{{.Status}}' }}\t{{ '{{.Ports}}' }}"
+      register: web_status
+      changed_when: false
+
+    - name: Display web container status
+      ansible.builtin.debug:
+        var: web_status.stdout

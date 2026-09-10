@@ -1,0 +1,62 @@
+---
+- name: Deploy Prometheus and Grafana monitoring stack
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  vars:
+    docker_users:
+      - ubuntu
+    docker_install_compose_plugin: true
+
+  roles:
+    - geerlingguy.docker
+
+  tasks:
+    - name: Create monitoring directory
+      ansible.builtin.file:
+        path: /opt/monitoring
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Copy Prometheus configuration
+      ansible.builtin.copy:
+        src: monitoring-files/prometheus.yaml
+        dest: /opt/monitoring/prometheus.yaml
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Copy Docker Compose configuration
+      ansible.builtin.copy:
+        src: monitoring-files/compose.yaml
+        dest: /opt/monitoring/compose.yaml
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Copy Cloudflare Tunnel token file
+      ansible.builtin.copy:
+        src: monitoring-files/.env
+        dest: /opt/monitoring/.env
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Validate Docker Compose configuration
+      ansible.builtin.command: docker compose -f compose.yaml config -q
+      args:
+        chdir: /opt/monitoring
+      changed_when: false
+
+    - name: Start or update Prometheus and Grafana
+      ansible.builtin.command: docker compose -f compose.yaml up -d
+      args:
+        chdir: /opt/monitoring
+      register: compose_up
+      changed_when: >
+        'Created' in compose_up.stdout or
+        'Started' in compose_up.stdout or
+        'Recreated' in compose_up.stdout
