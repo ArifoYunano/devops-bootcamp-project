@@ -296,9 +296,470 @@
   <main>
     <section id="docs">
       <!-- SYNC:START -->
-      <p>Testing</p>
-<h2>Documentation Generator Test</h2>
-<p>Added on Thu Sep 10 03:35:12 UTC 2026</p>
+      <p>End-to-end DevOps bootcamp project that provisions AWS infrastructure with Terraform, configures services with Ansible, builds the <strong>Ship</strong> web application into a Docker image, publishes that image to Amazon ECR, and deploys it to an EC2 web server. A separate monitoring stack (Prometheus + Grafana) runs on its own server and is exposed through a Cloudflare Tunnel. Repository documentation is automatically synchronized to a GitHub Pages site using GitHub Actions.</p>
+<h2>URLs</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Application</td>
+<td><a href="https://web.arifyunan.asia">https://web.arifyunan.asia</a></td>
+</tr>
+<tr>
+<td>Documentation site</td>
+<td><a href="https://arifoyunano.github.io/devops-bootcamp-project/">https://arifoyunano.github.io/devops-bootcamp-project/</a></td>
+</tr>
+<tr>
+<td>Source repository</td>
+<td><a href="https://github.com/ArifoYunano/devops-bootcamp-project">ArifoYunano/devops-bootcamp-project</a></td>
+</tr>
+<tr>
+<td>Monitoring (Grafana)</td>
+<td><a href="https://monitoring.arifyunan.asia">https://monitoring.arifyunan.asia</a></td>
+</tr>
+<tr>
+<td>Monitoring (Prometheus)</td>
+<td><a href="https://prometheus.arifyunan.asia">https://prometheus.arifyunan.asia</a></td>
+</tr>
+</tbody></table>
+<h2>Repository Layout</h2>
+<p>The repository is organized as a monorepo. It contains the web application, automation, infrastructure-as-code, and documentation tooling in one place.</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>app/</code></td>
+<td>Ship application source code, Dockerfile, and <code>.dockerignore</code></td>
+</tr>
+<tr>
+<td><code>ansible/</code></td>
+<td>Inventory, Ansible configuration, and server deployment playbooks</td>
+</tr>
+<tr>
+<td><code>terraform/</code></td>
+<td>AWS infrastructure-as-code files</td>
+</tr>
+<tr>
+<td><code>scripts/sync-docs.mjs</code></td>
+<td>Synchronizes <code>README.md</code> and the root <code>index.html</code> documentation site</td>
+</tr>
+<tr>
+<td><code>package.json</code></td>
+<td>Root Node.js tooling for the documentation sync command</td>
+</tr>
+<tr>
+<td><code>.github/workflows/commit-pipeline.yml</code></td>
+<td>Synchronizes documentation after documentation changes are pushed</td>
+</tr>
+<tr>
+<td><code>.github/workflows/static.yml</code></td>
+<td>Deploys the root <code>index.html</code> to GitHub Pages</td>
+</tr>
+<tr>
+<td><code>index.html</code></td>
+<td>GitHub Pages entry point generated from this README</td>
+</tr>
+</tbody></table>
+<pre><code>.
+├── .github/
+│   └── workflows/
+│       ├── commit-pipeline.yml
+│       └── static.yml
+├── ansible/
+├── app/
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   ├── package.json
+│   ├── public/
+│   ├── scripts/
+│   └── src/
+├── terraform/
+├── .gitignore
+├── index.html
+├── package.json
+└── README.md
+</code></pre>
+<h2>Architecture</h2>
+<p>The deployment pipeline moves the application through source control, containerization, a private container registry, configuration management, and public DNS. Monitoring runs as a separate path via Cloudflare Tunnel rather than public inbound ports.</p>
+<pre><code>GitHub repository
+        |
+        v
+Ansible controller (10.0.0.135)
+  - builds Docker image
+  - pushes image to Amazon ECR
+        |
+        v
+Amazon ECR private repository
+  296766961942.dkr.ecr.ap-southeast-1.amazonaws.com/
+  devops-bootcamp/final-project-arifyunan:v1
+        |
+        v
+Web EC2 server (10.0.0.5)
+  - Ansible pulls image from ECR
+  - Docker runs Nginx container on port 80
+        |
+        v
+Cloudflare DNS (proxied A record)
+  web.arifyunan.asia
+        |
+        v
+Public Ship application
+</code></pre>
+<pre><code>Monitoring server (10.0.0.136)
+  - Prometheus + Grafana via Docker Compose
+  - Node Exporter target: web server (10.0.0.5), via exporters group
+        |
+        v
+cloudflared (Cloudflare Tunnel)
+        |
+        v
+monitoring.arifyunan.asia (Grafana)
+prometheus.arifyunan.asia (Prometheus)
+</code></pre>
+<h3>Infrastructure nodes</h3>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Private IP</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ansible controller</td>
+<td>10.0.0.135</td>
+<td>Builds and publishes the application image; runs Ansible playbooks</td>
+</tr>
+<tr>
+<td>Web server</td>
+<td>10.0.0.5</td>
+<td>Pulls the ECR image and serves the application container on port 80; also a Node Exporter target</td>
+</tr>
+<tr>
+<td>Monitoring server</td>
+<td>10.0.0.136</td>
+<td>Hosts Prometheus, Grafana, and the Cloudflare Tunnel</td>
+</tr>
+</tbody></table>
+<p>All infrastructure is deployed in AWS region <strong>ap-southeast-1</strong>, inside a single VPC (<code>10.0.0.0/24</code>) with a public subnet (<code>10.0.0.0/25</code>) and a private subnet (<code>10.0.0.128/25</code>) connected via a single NAT gateway.</p>
+<h2>Quickstart</h2>
+<p>Clone the repository:</p>
+<pre><code class="language-bash">git clone https://github.com/ArifoYunano/devops-bootcamp-project.git
+cd devops-bootcamp-project
+</code></pre>
+<p>Provision or update AWS infrastructure using Terraform:</p>
+<pre><code class="language-bash">cd terraform
+terraform init
+terraform plan
+terraform apply
+</code></pre>
+<p>Run Ansible from the controller to deploy the web image:</p>
+<pre><code class="language-bash">cd ../ansible
+ansible-playbook playbook-web.yaml
+</code></pre>
+<p>Verify that the web server responds from inside the VPC:</p>
+<pre><code class="language-bash">curl -I http://10.0.0.5/
+</code></pre>
+<p>Expected result:</p>
+<pre><code>HTTP/1.1 200 OK
+</code></pre>
+<h2>Terraform</h2>
+<p>Terraform defines the AWS infrastructure used by the project.</p>
+<ul>
+<li><strong>Backend:</strong> S3, with native state locking (<code>use_lockfile = true</code>) </li>
+<li><strong>Modules:</strong> <code>terraform-aws-modules/vpc/aws</code> and <code>terraform-aws-modules/ec2-instance/aws</code></li>
+<li><strong>Key pair:</strong> existing <code>arifyunan-keypair</code></li>
+<li><strong>Provider:</strong> <code>hashicorp/aws ~&gt; 6.58</code>, Terraform <code>&gt;= 1.15</code></li>
+</ul>
+<h3>Typical Terraform responsibilities</h3>
+<ul>
+<li>Create the VPC, subnets, route tables, NAT connectivity, and security groups</li>
+<li>Create EC2 instances for the controller, web server, and monitoring stack</li>
+<li>Associate the shared <code>EC2-SSM-Role</code> IAM role (SSM access + ECR push/pull via <code>AmazonEC2ContainerRegistryPowerUser</code>) across all three instances</li>
+<li>Configure inbound rules required by the deployment</li>
+<li>Generate <code>inventory.ini</code> from instance IPs via a <code>templatefile()</code> resource</li>
+</ul>
+<h3>Security requirements</h3>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Port</th>
+<th>Source</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TCP</td>
+<td>80</td>
+<td>0.0.0.0/0</td>
+<td>Public HTTP access to the Nginx container (web server)</td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>22</td>
+<td>VPC only</td>
+<td>Administrative SSH</td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>9100</td>
+<td>Monitoring server only</td>
+<td>Node Exporter scraping</td>
+</tr>
+</tbody></table>
+<p>Prometheus (9090) and Grafana (3000) are <strong>not</strong> exposed via public security group rules — they&#39;re reached exclusively through the Cloudflare Tunnel running on the monitoring server, so no inbound ports need to be opened for them at all.</p>
+<p>Do not commit Terraform state, plans, <code>.terraform/</code>, private keys, or secret variable files. They are excluded through <code>.gitignore</code>.</p>
+<h2>Ansible</h2>
+<p>Ansible configures the servers after infrastructure is available.</p>
+<h3>Inventory groups</h3>
+<pre><code>[web]
+10.0.0.5
+
+[monitoring]
+10.0.0.136
+
+[exporters]
+10.0.0.5
+</code></pre>
+<p>A host can belong to more than one group. The web server belongs to both <code>web</code> and <code>exporters</code> because it runs the application and is also a monitoring target.</p>
+<h3>Web deployment</h3>
+<p><code>ansible/playbook-web.yaml</code> deploys the web application. Its main tasks are:</p>
+<ol>
+<li>Ensure Docker is running and enabled</li>
+<li>Install AWS CLI v2 if missing (via the official installer, not the distro package — the Ubuntu AMI used here doesn&#39;t have the <code>universe</code> repo component enabled, so <code>apt install awscli</code> isn&#39;t resolvable)</li>
+<li>Authenticate Docker to private Amazon ECR</li>
+<li>Stop the older Docker Compose Nginx stack if present</li>
+<li>Remove the previous web container</li>
+<li>Pull the selected ECR image</li>
+<li>Run the new web container with <code>80:80</code> port publishing</li>
+<li>Verify the container serves HTTP 200 locally on the web server</li>
+</ol>
+<p>Run the deployment:</p>
+<pre><code class="language-bash">cd ansible
+ansible-playbook playbook-web.yaml
+</code></pre>
+<p>Check the running container:</p>
+<pre><code class="language-bash">ansible web -m ansible.builtin.command -a &quot;docker ps&quot; -b
+</code></pre>
+<p>Expected port mapping:</p>
+<pre><code>0.0.0.0:80-&gt;80/tcp
+</code></pre>
+<h3>Monitoring stack</h3>
+<p><code>ansible/playbook-stack.yaml</code> deploys Prometheus and Grafana to the monitoring server via Docker Compose (using the <code>geerlingguy.docker</code> Galaxy role) and copies the Cloudflare Tunnel token needed by <code>cloudflared</code>. <code>ansible/playbook-exporter.yaml</code> installs Node Exporter on the <code>exporters</code> group (currently just the web server) using the <code>prometheus.prometheus</code> Galaxy collection.</p>
+<h2>Application</h2>
+<p>The application is <strong>Ship</strong>, a Vite-based web application using Three.js. The upstream source lives at <a href="https://github.com/Infratify/ship">Infratify/ship</a> and is vendored into this repo under <code>app/</code>.</p>
+<h3>Application commands</h3>
+<p>Run these commands from the application directory:</p>
+<pre><code class="language-bash">cd app
+npm ci
+npm run dev
+npm test
+npm run build
+npm run preview
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>npm ci</code></td>
+<td>Install exact dependency versions from <code>package-lock.json</code></td>
+</tr>
+<tr>
+<td><code>npm run dev</code></td>
+<td>Start the Vite development server</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>Run the application preflight check (validates <code>ship.config.json</code>)</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>Generate production files in <code>dist/</code></td>
+</tr>
+<tr>
+<td><code>npm run preview</code></td>
+<td>Serve the built application locally for validation</td>
+</tr>
+</tbody></table>
+<h3>Docker image</h3>
+<p>The application uses a multi-stage Docker build.</p>
+<ul>
+<li>The Node.js build stage installs dependencies using <code>npm ci</code></li>
+<li>Vite generates optimized static files with <code>npm run build</code></li>
+<li>The Nginx runtime stage copies only <code>dist/</code> and serves it on port 80</li>
+</ul>
+<pre><code class="language-dockerfile">FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]
+</code></pre>
+<p>Build and push the image directly from the Ansible controller (it already carries an IAM role with ECR permissions, so no local AWS credentials are needed):</p>
+<pre><code class="language-bash">cd ~/app  # or wherever the app/ source is checked out on the controller
+
+aws ecr get-login-password --region ap-southeast-1 \
+  | sudo docker login --username AWS --password-stdin 296766961942.dkr.ecr.ap-southeast-1.amazonaws.com
+
+sudo docker build -t 296766961942.dkr.ecr.ap-southeast-1.amazonaws.com/devops-bootcamp/final-project-arifyunan:v1 .
+
+sudo docker push 296766961942.dkr.ecr.ap-southeast-1.amazonaws.com/devops-bootcamp/final-project-arifyunan:v1
+</code></pre>
+<h2>Amazon ECR</h2>
+<p>The container image is stored in private Amazon ECR.</p>
+<ul>
+<li><strong>Registry:</strong> <code>296766961942.dkr.ecr.ap-southeast-1.amazonaws.com</code></li>
+<li><strong>Repository:</strong> <code>devops-bootcamp/final-project-arifyunan</code></li>
+<li><strong>Tag:</strong> <code>v1</code></li>
+<li><strong>Full image URI:</strong> <code>296766961942.dkr.ecr.ap-southeast-1.amazonaws.com/devops-bootcamp/final-project-arifyunan:v1</code></li>
+</ul>
+<h3>IAM permissions</h3>
+<p>A single IAM role, <code>EC2-SSM-Role</code>, is shared across all three instances (originally created for SSM access). It has <code>AmazonEC2ContainerRegistryPowerUser</code> attached, which covers both the controller&#39;s push permissions and the web server&#39;s pull permissions:</p>
+<blockquote>
+<p>Sharing one role across all three instances is a deliberate simplification for a personal project — it means the monitoring server also technically has ECR access it doesn&#39;t need, in exchange for not maintaining separate roles.</p>
+</blockquote>
+<h2>Cloudflare DNS</h2>
+<p>The web application runs on the EC2 web server but is exposed using Cloudflare DNS.</p>
+<p>An A record in the <code>arifyunan.asia</code> Cloudflare zone:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Type</td>
+<td>A</td>
+</tr>
+<tr>
+<td>Name</td>
+<td>web</td>
+</tr>
+<tr>
+<td>Content</td>
+<td>Public IPv4 address (Elastic IP) of the web EC2 instance</td>
+</tr>
+<tr>
+<td>Proxy status</td>
+<td>Proxied (orange cloud)</td>
+</tr>
+<tr>
+<td>TTL</td>
+<td>Auto</td>
+</tr>
+</tbody></table>
+<p>Do not use the private IP <code>10.0.0.5</code> in Cloudflare — it must point to the instance&#39;s public Elastic IP.</p>
+<p><strong>SSL/TLS mode:</strong> set to <strong>Flexible</strong>, since the origin Nginx container only serves plain HTTP on port 80 (no certificate configured on the instance itself). Flexible lets Cloudflare terminate HTTPS at the edge for visitors while still connecting to the origin over HTTP.</p>
+<p>Verify the published application:</p>
+<pre><code class="language-bash">curl -I https://web.arifyunan.asia
+</code></pre>
+<h2>Monitoring</h2>
+<p>The monitoring server (10.0.0.136) runs Prometheus and Grafana via Docker Compose. Node Exporter targets only the web server, through the <code>exporters</code> Ansible group.</p>
+<p>Unlike the web application, monitoring is <strong>not</strong> exposed via a Cloudflare DNS A record pointing at a public IP — instead, <code>cloudflared</code> (Cloudflare Tunnel) runs alongside the stack and creates outbound-only connections to Cloudflare&#39;s edge, so no inbound ports need to be opened on the monitoring server&#39;s security group at all.</p>
+<ul>
+<li>Grafana: <a href="https://monitoring.arifyunan.asia">https://monitoring.arifyunan.asia</a></li>
+<li>Prometheus: <a href="https://prometheus.arifyunan.asia">https://prometheus.arifyunan.asia</a></li>
+</ul>
+<h2>CI/CD</h2>
+<p>Two GitHub Actions workflows live under <code>.github/workflows/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>commit-pipeline.yml</code></td>
+<td>Synchronizes <code>README.md</code> and root <code>index.html</code>, auto-committing generated documentation changes as <code>github-actions[bot]</code></td>
+</tr>
+<tr>
+<td><code>static.yml</code></td>
+<td>Deploys the root static site to GitHub Pages</td>
+</tr>
+</tbody></table>
+<h3>Documentation sync</h3>
+<p><code>scripts/sync-docs.mjs</code> keeps <code>README.md</code> and <code>index.html</code> aligned. <code>commit-pipeline.yml</code> runs it (<code>npm ci</code> then <code>npm run sync:docs -- --write</code>) whenever <code>README.md</code>, <code>scripts/sync-docs.mjs</code>, <code>package.json</code>, or <code>package-lock.json</code> change on <code>main</code>, and commits the regenerated <code>index.html</code> if it differs. A guard (<code>if: github.actor != &#39;github-actions[bot]&#39;</code>) prevents the bot&#39;s own commits from re-triggering the sync job.</p>
+<p>Run the sync locally from the repository root:</p>
+<pre><code class="language-bash">npm install
+npm run sync:docs           # dry run
+npm run sync:docs -- --write # writes the generated result to disk
+</code></pre>
+<h3>GitHub Pages</h3>
+<p>GitHub Pages is configured with:</p>
+<pre><code>Repository Settings -&gt; Pages -&gt; Build and deployment -&gt; Source: GitHub Actions
+</code></pre>
+<p><code>static.yml</code> triggers on pushes that touch <code>index.html</code> (including the bot&#39;s own commits from <code>commit-pipeline.yml</code>) or via manual <code>workflow_dispatch</code>, builds the Pages artifact with <code>actions/configure-pages</code> + <code>actions/upload-pages-artifact</code>, and deploys with <code>actions/deploy-pages</code>. The site publishes at:</p>
+<p><a href="https://arifoyunano.github.io/devops-bootcamp-project/">https://arifoyunano.github.io/devops-bootcamp-project/</a></p>
+<h3>CI/CD validation</h3>
+<p>To test the complete documentation pipeline:</p>
+<pre><code class="language-bash">nano README.md
+npm run sync:docs -- --write
+
+git add README.md index.html
+git commit -m &quot;docs: update deployment documentation&quot;
+git push origin main
+</code></pre>
+<p>After the push:</p>
+<ol>
+<li><code>Docs Sync</code> (<code>commit-pipeline.yml</code>) runs and synchronizes the documentation files</li>
+<li>If <code>index.html</code> changed, <code>github-actions[bot]</code> creates a commit containing the generated changes</li>
+<li><code>Deploy static site to GitHub Pages</code> (<code>static.yml</code>) picks up that change and publishes the updated <code>index.html</code></li>
+<li>The GitHub Pages documentation site reflects the latest README content</li>
+</ol>
+<h2>Security Notes</h2>
+<p>The following must never be committed to GitHub:</p>
+<ul>
+<li>AWS credentials and access keys</li>
+<li>GitHub personal access tokens</li>
+<li>SSH private keys, <code>.pem</code>, and <code>.key</code> files</li>
+<li><code>.env</code> files containing secrets</li>
+<li>Terraform state files and plans</li>
+<li>Ansible vault passwords or secret variable files</li>
+</ul>
+<p>The root <code>.gitignore</code> excludes common sensitive and generated files, including <code>node_modules/</code>, <code>dist/</code>, <code>.terraform/</code>, <code>*.tfstate</code>, <code>*.tfvars</code>, <code>.env*</code>, keys, and credentials.</p>
+<p>   <img src="docs/images/web.png" alt="Deployed Ship application"></p>
+<p>   Web</p>
+<p>   <img src="docs/images/grafana.png" alt="Deployed Ship application"></p>
+<p>   Grafana</p>
+<h2>Project Status</h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Application built with Vite</li>
+<li><input checked="" disabled="" type="checkbox"> Multi-stage Docker image built with Node.js and Nginx</li>
+<li><input checked="" disabled="" type="checkbox"> Image pushed to private Amazon ECR</li>
+<li><input checked="" disabled="" type="checkbox"> Ansible pulls the ECR image on the web server</li>
+<li><input checked="" disabled="" type="checkbox"> Docker container serves the application on port 80</li>
+<li><input checked="" disabled="" type="checkbox"> HTTP verification returned 200 OK</li>
+<li><input checked="" disabled="" type="checkbox"> Cloudflare record exposes web.arifyunan.asia (with Flexible SSL)</li>
+<li><input checked="" disabled="" type="checkbox"> Cloudflare Tunnel exposes the monitoring stack (Grafana + Prometheus)</li>
+<li><input checked="" disabled="" type="checkbox"> Documentation sync workflow is active</li>
+<li><input checked="" disabled="" type="checkbox"> GitHub Pages deployment workflow is active</li>
+</ul>
 
       <!-- SYNC:END -->
     </section>
