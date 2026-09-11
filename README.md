@@ -404,9 +404,11 @@ The following must never be committed to GitHub:
 
 The root `.gitignore` excludes common sensitive and generated files, including `node_modules/`, `dist/`, `.terraform/`, `*.tfstate`, `*.tfvars`, `.env*`, keys, and credentials.
 
+## Result
+
    ![Deployed Ship application](docs/images/web.png)
 
-   Web
+   Web App
 
    ![Deployed Ship application](docs/images/grafana.png)
 
