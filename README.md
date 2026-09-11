@@ -7,7 +7,7 @@ End-to-end DevOps bootcamp project that provisions AWS infrastructure with Terra
 | Service | URL |
 |---|---|
 | Application | https://web.arifyunan.asia |
-| Documentation site | https://arifoyunano.github.io/devops-bootcamp-project/ |
+| Documentation site | [https://documentation.arifyunan.asia/](https://arifoyunano.github.io/devops-bootcamp-project)) |
 | Source repository | [ArifoYunano/devops-bootcamp-project](https://github.com/ArifoYunano/devops-bootcamp-project) |
 | Monitoring (Grafana) | https://monitoring.arifyunan.asia |
 | Monitoring (Prometheus) | https://prometheus.arifyunan.asia |
