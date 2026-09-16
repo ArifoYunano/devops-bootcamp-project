@@ -12,6 +12,10 @@ End-to-end DevOps bootcamp project that provisions AWS infrastructure with Terra
 | Monitoring (Grafana) | https://monitoring.arifyunan.asia |
 | Monitoring (Prometheus) | https://prometheus.arifyunan.asia |
 
+## Project Architecture
+
+   ![Deployed Ship application](docs/images/architecture.png)
+
 ## Repository Layout
 
 The repository is organized as a monorepo. It contains the web application, automation, infrastructure-as-code, and documentation tooling in one place.
